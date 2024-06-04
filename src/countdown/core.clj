@@ -19,12 +19,15 @@
 (defn evaluate
   "Returns distance to target"
   [target tree]
-  (println "Evaluating tree" (pprint tree))
+;  (println "Evaluating tree" (pprint tree))
   (let [value (eval tree)]
-    {:tree tree
-     :target target
-     :score (abs (- target value))
-     :value value}))
+    (merge
+     (when (= target value)
+       {:message "!!!!! WINNER !!!"})
+     {:tree tree
+      :target target
+      :score (abs (- target value))
+      :value value})))
 
 (defn eval-all
   [target trees]
@@ -55,9 +58,15 @@
   "I don't do a whole lot ... yet."
   [target & nums]
   (let [target (Integer/parseInt target)
-        nums (map #(Integer/parseInt %) nums)
-        trees (gen-trees nums)]
+        nums   (map #(Integer/parseInt %) nums)]
     (println "Aiming for" target "with" nums)
-    (println "Result" (pprint (first (eval-all target trees)))))
+    (doseq [n           (range 1 (inc (count nums)))
+            combination (combo/combinations nums n)]
+      (println "Using number set " combination)
+      (let [trees (gen-trees combination)
+            best (first (eval-all target trees))]
+        (println "Result" (pprint best))
+        (when (zero? (:score best))
+          (System/exit 0)))))
 ;  (+ 5 (* 3 7))
   )
