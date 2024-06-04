@@ -54,19 +54,23 @@
 ;;['(+ 5 3)]
 
 
+(defn try-combination
+  [target combination]
+  (let [trees (gen-trees combination)
+        best (first (eval-all target trees))]
+    (println  "Using number set " combination  " =>   Result" (pprint best))
+    (when (zero? (:score best))
+      (System/exit 0))))
+
 (defn -main
   "I don't do a whole lot ... yet."
   [target & nums]
   (let [target (Integer/parseInt target)
         nums   (map #(Integer/parseInt %) nums)]
     (println "Aiming for" target "with" nums)
-    (doseq [n           (range 1 (inc (count nums)))
-            combination (combo/combinations nums n)]
-      (println "Using number set " combination)
-      (let [trees (gen-trees combination)
-            best (first (eval-all target trees))]
-        (println "Result" (pprint best))
-        (when (zero? (:score best))
-          (System/exit 0)))))
+    (let [combinations (for [n           (range 1 (inc (count nums)))
+                             combination (combo/combinations nums n)]
+                         combination)]
+      (doall (map #(try-combination target %) combinations))))
 ;  (+ 5 (* 3 7))
   )
