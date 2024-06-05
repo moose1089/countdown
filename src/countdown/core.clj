@@ -4,6 +4,10 @@
             [clojure.walk :as walk])
   (:gen-class))
 
+
+;; lein run 930 50 75 10 5 1 7
+;; takes about 5 mins
+
 (defn pprint
   [s]
   (let [f (fn [x]
@@ -41,17 +45,19 @@
   [nums]
   (if (= 1 (count nums))
     [(first nums)]
-    (let [partitions        (partitions-mem nums :min 2 :max 2)]
-      (for [operation       [+ - * /]
-            [part-a part-b] (if (#{+ *} operation) ;; these are associative
-                              partitions
-                              (concat partitions (map reverse partitions)))
-            part-a-tree     (gen-trees part-a)
-            part-b-tree     (gen-trees part-b)
-            :when           (not (and (= operation /)
-                                      (zero? (eval part-b-tree))))]
-        (do
-          (list operation part-a-tree part-b-tree))))))
+    (let [partitions (partitions-mem nums :min 2 :max 2)]
+      (apply concat
+             (for [operation       [+ - * /]
+                   [part-a part-b] (if (#{+ *} operation) ;; these are associative
+                                     partitions
+                                     (concat partitions (map reverse partitions)))]
+               (let [[a-trees b-trees] (pvalues (gen-trees part-a) (gen-trees part-b))] ;; perhaps separate large/small calls
+                 (for [part-a-tree a-trees
+                       part-b-tree    b-trees
+                       :when           (not (and (= operation /)
+                                                 (zero? (eval part-b-tree))))]
+                   (do
+                     (list operation part-a-tree part-b-tree)))))))))
 
 (def gen-trees (memoize gen-trees*))
 ;(def gen-trees ( identity gen-trees*))
