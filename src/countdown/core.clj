@@ -4,7 +4,6 @@
             [clojure.walk :as walk])
   (:gen-class))
 
-
 (defn pprint
   [s]
   (let [f (fn [x]
@@ -19,7 +18,6 @@
 (defn evaluate
   "Returns distance to target"
   [target tree]
-;  (println "Evaluating tree" (pprint tree))
   (let [value (eval tree)]
     (merge
      (when (= target value)
@@ -35,23 +33,28 @@
            (for [t trees]
              (evaluate target t))))
 
-(defn gen-trees
+(def gen-trees)
+
+(def partitions-mem (memoize combo/partitions))
+
+(defn gen-trees*
   [nums]
-  #_(println "gen-trees" nums)
   (if (= 1 (count nums))
     [(first nums)]
-    (let [partitions     (combo/partitions nums :min 2 :max 2)
-          all-partitions (concat partitions (map reverse partitions))]
-      (for [operation [+ - * /]
-            [part-a part-b] all-partitions
-            part-a-tree (gen-trees part-a)
-            part-b-tree (gen-trees part-b)
-            :when (not
-                   (and (= operation /)
-                        (zero? (eval part-b-tree))))]
-        (list operation part-a-tree part-b-tree)))))
+    (let [partitions        (partitions-mem nums :min 2 :max 2)]
+      (for [operation       [+ - * /]
+            [part-a part-b] (if (#{+ *} operation) ;; these are associative
+                              partitions
+                              (concat partitions (map reverse partitions)))
+            part-a-tree     (gen-trees part-a)
+            part-b-tree     (gen-trees part-b)
+            :when           (not (and (= operation /)
+                                      (zero? (eval part-b-tree))))]
+        (do
+          (list operation part-a-tree part-b-tree))))))
 
-;;['(+ 5 3)]
+(def gen-trees (memoize gen-trees*))
+;(def gen-trees ( identity gen-trees*))
 
 
 (defn try-combination
@@ -63,7 +66,6 @@
       (System/exit 0))))
 
 (defn -main
-  "I don't do a whole lot ... yet."
   [target & nums]
   (let [target (Integer/parseInt target)
         nums   (map #(Integer/parseInt %) nums)]
@@ -71,6 +73,4 @@
     (let [combinations (for [n           (range 1 (inc (count nums)))
                              combination (combo/combinations nums n)]
                          combination)]
-      (doall (map #(try-combination target %) combinations))))
-;  (+ 5 (* 3 7))
-  )
+      (doall (map #(try-combination target %) combinations)))))
