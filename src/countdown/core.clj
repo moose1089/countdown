@@ -48,11 +48,11 @@
                    [part-a part-b] (if (#{+ *} operation) ;; these are associative
                                      partitions
                                      (concat partitions (map reverse partitions)))]
-               (let [[a-trees b-trees] (pvalues (gen-trees part-a) (gen-trees part-b))] ;; perhaps separate large/small calls
+               (let [[a-trees b-trees] [(gen-trees part-a) (gen-trees part-b)]]
                  (for [part-a-tree a-trees
-                       part-b-tree    b-trees
-                       :when           (not (and (= operation /)
-                                                 (zero? (eval part-b-tree))))]
+                       part-b-tree b-trees
+                       :when       (not (and (= operation /)
+                                             (zero? (eval part-b-tree))))]
                    (do
                      (list operation part-a-tree part-b-tree)))))))))
 
@@ -76,4 +76,6 @@
     (let [combinations (for [n           (range 1 (inc (count nums)))
                              combination (combo/combinations nums n)]
                          combination)]
-      (doall (map #(try-combination target %) combinations)))))
+      (doall (pmap #(try-combination target %) combinations))))
+  (shutdown-agents)
+  )
