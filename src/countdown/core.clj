@@ -4,25 +4,22 @@
             [clojure.walk :as walk])
   (:gen-class))
 
-
 ;; lein run 930 50 75 10 5 1 7
 ;; takes about 5 mins
 
-(defn pprint
-  [s]
-  (let [f (fn [x]
-            (cond
-              (= x *) "*"
-              (= x +) "+"
-              (= x -) "-"
-              (= x /) "/"
-              :else x))]
-    (walk/postwalk f s)))
+;; improvement by codestral.
+(defn pprint [s]
+  (let [f {* "*" + "+" - "-" / "/"}]
+    (clojure.walk/prewalk-replace f s)))
 
 (defn evaluate
   "Returns distance to target"
-  [target tree]
-  (let [value (eval tree)]
+  [^long target ^clojure.lang.IPersistentMap tree]
+  (let [value (if (number? tree)
+                tree
+                (eval tree))]
+    (when-not (number? value)
+      (throw (Exception. "Tree expression does not evaluate to a number")))
     (merge
      (when (= target value)
        {:message "!!!!! WINNER !!!"})
