@@ -1,6 +1,7 @@
 (ns countdown.core
   (:require [clojure.math.combinatorics :as combo]
             [clojure.pprint :as pprint]
+            [clojure.tools.trace :as trace]
             [clojure.walk :as walk])
   (:gen-class))
 
@@ -30,9 +31,12 @@
 
 (defn eval-all
   [target trees]
+;  (println "eval-all trees " trees )
   (sort-by :score
            (for [t trees]
-             (evaluate target t))))
+             (do
+;               (println "evaluate " t )
+               (evaluate target t)))))
 
 (def gen-trees)
 
@@ -57,8 +61,60 @@
                      (list operation part-a-tree part-b-tree)))))))))
 
 (def gen-trees (memoize gen-trees*))
-;(def gen-trees ( identity gen-trees*))
 
+(defn gen-shapes
+  "Represent number positions by :n. Generates all tree shapes possible with n
+  numbers. The second postion is the number of unbound numbers on the left hand
+  branch"
+  [n]
+  (if ( = 1 n)
+    [:n]
+    (distinct
+     (apply concat
+            (for [i (range 1 n)]
+              (apply concat
+                     (for [operation [+ - * /]]
+                       (let [[a-trees b-trees] [(gen-shapes i) (gen-shapes (- n i))]]
+                         (for [part-a-tree a-trees
+                               part-b-tree b-trees]
+                           (list operation i part-a-tree part-b-tree))))))))))
+
+
+(defn populate-tree
+  [numbers shape]
+;  (println "populate-tree call" numbers shape)
+  (cond
+    (and
+     (= :n shape)
+     (= 1 (count numbers))) (first numbers)
+    :else (let [[op n left right]  shape]
+            (list op
+                  (populate-tree (take n numbers) left)
+                  (populate-tree (drop n numbers) right)))))
+
+;(trace/trace-vars populate-tree evaluate)
+
+(defn populate-trees
+  [combination shape]
+ ; (println "populate-trees call" combination shape)
+  (let [permuations (combo/permutations combination)
+        r
+        (doall (for [p permuations]
+                (populate-tree p shape)))]
+;    (println "populate-trees return " r)
+    r
+    ))
+
+(defn try-combination-2
+  [target combination]
+  (let [shapes          (gen-shapes (count combination))
+;        _               (println "shapes" shapes)
+        populated-trees (mapcat (partial populate-trees combination) shapes)
+ ;       _               (println "populated-trees" populated-trees)
+        best            (first (eval-all target populated-trees))]
+    (println  "Using number set " combination  " =>   Result" (pprint best))
+    (when (zero? (:score best))
+      (System/exit 0))))
 
 (defn try-combination
   [target combination]
@@ -70,12 +126,22 @@
 
 (defn -main
   [target & nums]
-  (let [target (Integer/parseInt target)
-        nums   (map #(Integer/parseInt %) nums)]
-    (println "Aiming for" target "with" nums)
-    (let [combinations (for [n           (range 1 (inc (count nums)))
-                             combination (combo/combinations nums n)]
-                         combination)]
-      (doall (pmap #(try-combination target %) combinations))))
+  (doseq [a (gen-shapes (count nums))]
+    (let [target (Integer/parseInt target)
+          nums   (map #(Integer/parseInt %) nums)]
+      (println "Aiming for" target "with" nums)
+      (let [combinations (for [n           (range 1 (inc (count nums)))
+                               combination (combo/combinations nums n)]
+                           combination)]
+        (doall (map #(try-combination-2 target %) combinations)))))
+  ;; Old method
+  (when-not true
+    (let [target (Integer/parseInt target)
+          nums   (map #(Integer/parseInt %) nums)]
+      (println "Aiming for" target "with" nums)
+      (let [combinations (for [n           (range 1 (inc (count nums)))
+                               combination (combo/combinations nums n)]
+                           combination)]
+        (doall (pmap #(try-combination target %) combinations)))))
   (shutdown-agents)
   )
