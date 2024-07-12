@@ -89,14 +89,11 @@
   [numbers shape]
   (cond
     (and
-;     (= :n shape)
      (= 1 (count numbers))) (first numbers)
     :else (let [[op n left right]  shape]
             (list op
                   (populate-tree (take n numbers) left)
                   (populate-tree (drop n numbers) right)))))
-
-;(trace/trace-vars populate-tree* evaluate)
 
 (def populate-tree (memoize populate-tree*))
 
@@ -108,28 +105,6 @@
             (populate-tree p shape))]
     r
     ))
-
-#_(defn make-fn-1
-  [tree num-vars]
-  ;; LOOK HERE: Fill in code below to return a function that takes num-vars vars and substitutes them in the places currently represented by :n
-  (let [zipper (zip/seq-zip tree)]
-    (fn [& args]
-      (-> zipper
-          (zip/postwalk #(if (= % :n) (first args) %)) ;; replace each occurrence of `:n` with the first arg, then move on to the next arg
-          zip/root))))
-
-
-#_(defn try-combination-2
-  [target combination]
-  (let [shapes          (gen-shapes (count combination))
-;        _               (println "shapes" shapes)
-        populated-trees (mapcat (partial populate-trees combination) shapes)
- ;       _               (println "populated-trees" populated-trees)
-        best            (first (eval-all target populated-trees))]
-    (println  "Using number set " combination "had" (count shapes) " shapes =>   Result" (pprint best))
-    (when
-        (zero? (:score best))
-      (System/exit 0))))
 
 (defn try-combination
   [target combination]
@@ -143,12 +118,8 @@
   "Return a function that provides score for combination for this shape "
   [shape target num-args]
   (let [args            (mapv #(symbol (str "arg_" %)) (range num-args))
-  ;      _               (println "args" args)
         shape-with-args (populate-tree* args shape)
-;        _               (println "get-function-for-shape shape-with-args" shape-with-args)
         shaped-fn       (eval (concat '(fn) [args] [shape-with-args]))]
- ;   (println "get-function-for-shape shaped-fn 1 " (concat '(fn) [args] [shape-with-args]))
- ;   (println "get-function-for-shape shaped-fn 2" shaped-fn)
     (fn [args]
       (let [value (try
                     (apply shaped-fn args)
@@ -182,11 +153,10 @@
     nil
     (apply concat
            (for [i (range 1 (inc (count nums)))]
-             (do (println "loop i" i )
-                 (apply concat
-                        (for [shape (gen-shapes i)]
-                          (let [f (get-function-for-shape shape target i)]
-                            (map f (combo/permuted-combinations nums i)))))))))))
+             (apply concat
+                    (for [shape (gen-shapes i)]
+                      (let [f (get-function-for-shape shape target i)]
+                        (map f (combo/permuted-combinations nums i))))))))))
 
 (defn -main
   [target & nums]
