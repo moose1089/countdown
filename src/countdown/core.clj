@@ -72,7 +72,7 @@
           :score  (when value (abs (- target value)))
           :value  value})))))
 
-(defn method-3
+(defn solve
   [target nums]
   (doall
    (reduce
@@ -91,17 +91,16 @@
         a))
     nil
     (apply concat
-           (for [i (range 1 (inc (count nums)))
+           (for [i     (range 1 (inc (count nums)))
                  shape (gen-shapes i)]
              (let [f (get-function-for-shape shape target i)]
                (map f (combo/permuted-combinations nums i))))))))
 
 (defn -main
   [target & nums]
-  ;;  method 3
   (let [target (Integer/parseInt target)
         nums   (map #(Integer/parseInt %) nums)]
     (println "Aiming for" target "with" nums)
-    (method-3 target nums))
+    (solve target nums))
   (shutdown-agents)
   )
