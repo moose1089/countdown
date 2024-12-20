@@ -40,26 +40,29 @@
    :nums-unused (remove-first* nums n)
    :score       (score-for target n)})
 
-(defn s-contains
+(defn s-contains*
   "Seq a contains b"
   [a b]
   ;; if not then b has a item not listed in a
   (empty? (remove-all b a)))
 
+(def s-contains (memoize s-contains*))
+
 (defn combine-values [target a b]
-  (for [op [+ - * /]]
-    (when (and
-           (s-contains (:nums-unused a) (:nums-used b))
-           (not (and (= op /) (zero? (:v b))))
-           (not (and (= op /) (not (zero? (mod (:v a) (:v b)))))))
-      (let [v (op (:v a) (:v b))]
-        {:v           v
-         :op          op
-         :left        a
-         :right       b
-         :nums-used   (concat (:nums-used a) (:nums-used b))
-         :nums-unused (remove-all (:nums-unused a) (:nums-used b))
-         :score       (score-for target v)}))))
+  (when (and (:nums-unused a) (:nums-unused b))
+    (for [op [+ - * /]]
+      (when (and
+             (s-contains (:nums-unused a) (:nums-used b))
+             (not (and (= op /) (zero? (:v b))))
+             (not (and (= op /) (not (zero? (mod (:v a) (:v b)))))))
+        (let [v (op (:v a) (:v b))]
+          {:v           v
+           :op          op
+           :left        a
+           :right       b
+           :nums-used   (concat (:nums-used a) (:nums-used b))
+           :nums-unused (remove-all (:nums-unused a) (:nums-used b))
+           :score       (score-for target v)})))))
 
 ;;(trace/trace-vars #_s-contains #_combine-values remove-first*)
 
@@ -79,12 +82,15 @@
        :v          (:v best-value)}
       :else
       (let [next-v              (first values-waiting)
-            additional-values-1 (mapcat #(combine-values target next-v %) found-values)
-            additional-values-2 (mapcat #(combine-values target % next-v) found-values)
+            additional-values-1 (doall (distinct (filter some?
+                                                         (mapcat #(combine-values target next-v %) found-values))))
+            additional-values-2 (doall (distinct (filter some?
+                                                         (mapcat #(combine-values target % next-v) found-values))))
+            _ (println "found" (count found-values) "waiting" (count values-waiting)  "new vals" (count additional-values-1) (count additional-values-2))
             new-vals            (doall
                                  (filter some? (distinct (concat additional-values-1 additional-values-2))))]
         (recur (conj found-values next-v)
-               (concat (rest values-waiting) new-vals)
+               (distinct (concat (rest values-waiting) new-vals))
                (if (nil? best-score) (:score next-v) (min (:score next-v) best-score))
                (if (or (nil? best-value)
                        (< (:score next-v) best-score))
