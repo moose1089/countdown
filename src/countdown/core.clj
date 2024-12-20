@@ -38,8 +38,7 @@
 (defn populate-tree*
   [numbers shape]
   (cond
-    (and
-     (= 1 (count numbers))) (first numbers)
+    (= 1 (count numbers)) (first numbers)
     :else (let [[op n left right]  shape]
             (list op
                   (populate-tree (take n numbers) left)
