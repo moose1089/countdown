@@ -2,6 +2,7 @@
   (:require [clojure.math.combinatorics :as combo]
             [clojure.pprint :as pprint]
             [clojure.tools.trace :as trace]
+            [medley.core :as medley]
             [clojure.walk :as walk])
   (:gen-class))
 
@@ -69,10 +70,11 @@
 (defn solve
   [target nums]
   (loop
-   [found-values   []
-    values-waiting (map (partial make-initial-vals target nums) nums)
-    best-score     nil
-    best-value     nil]
+      [found-values   {} ;; nums-unused : [ values]
+       values-waiting (map (partial make-initial-vals target nums) nums)
+       best-score     nil
+       best-value     nil]
+    ;(println "found" (medley/map-vals count found-values))
     (cond
       (or
        (zero? (or best-score 1))
@@ -82,15 +84,22 @@
        :v          (:v best-value)}
       :else
       (let [next-v              (first values-waiting)
+            next-v-unused       (:nums-unused next-v)
+            matching-keys       (filter #(s-contains % (:nums-used next-v)) (keys found-values))
+            matching-found      (mapcat #(get found-values %) matching-keys)
             additional-values-1 (doall (distinct (filter some?
-                                                         (mapcat #(combine-values target next-v %) found-values))))
+                                                         (mapcat #(combine-values target next-v %) matching-found))))
             additional-values-2 (doall (distinct (filter some?
-                                                         (mapcat #(combine-values target % next-v) found-values))))
-            _ (println "found" (count found-values) "waiting" (count values-waiting)  "new vals" (count additional-values-1) (count additional-values-2))
+                                                         (mapcat #(combine-values target % next-v) matching-found))))
+            all-additional      (concat additional-values-1 additional-values-2)
+            _                   (println ;"found" (reduce + (map count (vals found-values)))
+                                 "waiting" (count values-waiting)
+                                 "dist" (frequencies (map :nums-unused all-additional))
+                                 "new vals" (count additional-values-1) (count additional-values-2))
             new-vals            (doall
-                                 (filter some? (distinct (concat additional-values-1 additional-values-2))))]
-        (recur (conj found-values next-v)
-               (distinct (concat (rest values-waiting) new-vals))
+                                 (filter some? all-additional))]
+        (recur (update found-values next-v-unused conj next-v)
+               (concat (rest values-waiting) new-vals)
                (if (nil? best-score) (:score next-v) (min (:score next-v) best-score))
                (if (or (nil? best-value)
                        (< (:score next-v) best-score))

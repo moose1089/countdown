@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.11.0"]
                  [nrepl "1.2.0"]
                  [org.clojure/tools.trace "0.7.11"]
+                 [dev.weavejester/medley "1.8.1"]
                  [org.clojure/math.combinatorics "0.3.0"]]
   :main ^:skip-aot countdown.core
   :target-path "target/%s"
