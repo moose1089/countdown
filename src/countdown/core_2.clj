@@ -50,63 +50,78 @@
 (def s-contains (memoize s-contains*))
 
 (defn combine-values [target a b]
-  (when (and (:nums-unused a) (:nums-unused b))
-    (for [op [+ - * /]]
-      (when (and
-             (s-contains (:nums-unused a) (:nums-used b))
-             (not (and (= op /) (zero? (:v b))))
-             (not (and (= op /) (not (zero? (mod (:v a) (:v b)))))))
-        (let [v (op (:v a) (:v b))]
-          {:v           v
-           :op          op
-           :left        a
-           :right       b
-           :nums-used   (concat (:nums-used a) (:nums-used b))
-           :nums-unused (remove-all (:nums-unused a) (:nums-used b))
-           :score       (score-for target v)})))))
+  (let [r
+        (filter some?
+                (when (and (:nums-unused a) (:nums-unused b))
+                  (for [op    [+ - * /]
+                        [l r] [[a b] [b a]]]
+                    (do
+  ;                    (println "YYY " (:v l) op (:v r))
+                      (when (and
+                             (s-contains (:nums-unused a) (:nums-used b))            ;; they fit together
+                             (not (and (= op /) (zero? (:v r))))                     ;; no divide by 0
+                             (not (and (#{+ *} op) (= l b) (= r a)))                 ;; No need for swapped with + or *
+                             (not (and (= op /) (not (zero? (mod (:v l) (:v r))))))) ;; stick to ℤ
+                        (let [v (op (:v l) (:v r))]
+                          {:v           v
+                           :op          op
+                           :left        l
+                           :right       r
+                           :nums-used   (concat (:nums-used l) (:nums-used r))
+                           :nums-unused (remove-all (:nums-unused l) (:nums-used r))
+                           :score       (score-for target v)}))))))]
+ ;   (println "combine-values" target "from" a "," b "=>"r)
+    r))
 
 ;;(trace/trace-vars #_s-contains #_combine-values remove-first*)
 
 (defn solve
   [target nums]
-  (loop
-      [found-values   {} ;; nums-unused : [ values]
-       values-waiting (map (partial make-initial-vals target nums) nums)
-       best-score     nil
-       best-value     nil]
-    ;(println "found" (medley/map-vals count found-values))
-    (cond
-      (or
-       (zero? (or best-score 1))
-       (empty? values-waiting))
-      {:best-score best-score
-       :best-value best-value
-       :v          (:v best-value)}
-      :else
-      (let [next-v              (first values-waiting)
-            next-v-unused       (:nums-unused next-v)
-            matching-keys       (filter #(s-contains % (:nums-used next-v)) (keys found-values))
-            matching-found      (mapcat #(get found-values %) matching-keys)
-            additional-values-1 (doall (distinct (filter some?
-                                                         (mapcat #(combine-values target next-v %) matching-found))))
-            additional-values-2 (doall (distinct (filter some?
-                                                         (mapcat #(combine-values target % next-v) matching-found))))
-            all-additional      (concat additional-values-1 additional-values-2)
-            _                   (println ;"found" (reduce + (map count (vals found-values)))
-                                 "waiting" (count values-waiting)
-                                 "dist" (frequencies (map :nums-unused all-additional))
-                                 "new vals" (count additional-values-1) (count additional-values-2))
-            new-vals            (doall
-                                 (filter some? all-additional))]
-        (recur (update found-values next-v-unused conj next-v)
-               (concat (rest values-waiting) new-vals)
-               (if (nil? best-score) (:score next-v) (min (:score next-v) best-score))
-               (if (or (nil? best-value)
-                       (< (:score next-v) best-score))
-                 (do
-                   (println "new best" (pprint next-v) "=" (:v next-v))
-                   next-v)
-                 best-value))))))
+  (let [grouping-fn (juxt :v :nums-used)]
+    (loop
+        [found-values   {} ;; [:v, nums-used] : [values]
+         values-waiting (map (partial make-initial-vals target nums) nums)
+         best-score     nil
+         best-value     nil]
+;      (println "found dist" (medley/map-vals count found-values))
+;      (println "found all " found-values)
+      (cond
+        (or
+         (zero? (or best-score 1))
+         (empty? values-waiting))
+        {:best-score best-score
+         :best-value best-value
+         :v          (:v best-value)}
+        :else
+        (let [next-v                 (first values-waiting)
+              next-v-unused          (:nums-unused next-v)
+              matching-keys          (filter #(s-contains (:nums-unused next-v) (second %)) (keys found-values))
+              matching-found         (map #(first (get found-values %)) matching-keys) ;; TODO add first
+              additional-values      (mapcat #(combine-values target next-v %) matching-found)
+              new-vals               (doall (distinct additional-values))
+              dead-end-values        (filter #(= [] (:nums-unused %)) new-vals)
+              fruitful-values        (filter #(not= [] (:nums-unused %)) new-vals)
+              values-to-add-to-found (conj dead-end-values next-v)
+              best-candidate         (first (sort-by :score values-to-add-to-found))]
+          (println
+           "found " (reduce + (map count (vals found-values)))
+ ;          "matching found (matching)" matching-found
+           "waiting" (count values-waiting) #_(frequencies (map :nums-unused values-waiting))
+;           "dist new vals" (frequencies (map :nums-unused new-vals))
+           "new vals" (count new-vals)
+ ;          "fruitful "(frequencies (map :nums-unused fruitful-values))
+           )
+          (recur (merge-with conj
+                             found-values
+                             (group-by grouping-fn values-to-add-to-found))
+                 (concat (rest values-waiting) fruitful-values)
+                 (if (nil? best-score) (:score best-candidate) (min (:score best-candidate) best-score))
+                 (if (or (nil? best-value)
+                         (< (:score best-candidate) best-score))
+                   (do
+                     (println "new best" (pprint best-candidate) "=" (:v best-candidate))
+                     best-candidate)
+                   best-value)))))))
 
 ;; Value =
 ;; {:v value
