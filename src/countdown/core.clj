@@ -6,7 +6,7 @@
   (:gen-class))
 
 ;; lein run 930 50 75 10 5 1 7
-;; takes about 7s
+
 
 (defn pprint [s]
   (let [f {* "*" + "+" - "-" / "/"}]
