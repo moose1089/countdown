@@ -10,6 +10,7 @@
                  [org.clojure/math.combinatorics "0.3.0"]]
   :main ^:skip-aot countdown.core
   :target-path "target/%s"
-  :aliases { "v2" ["run" "-m" "countdown.core-2"]
-}
+  :aliases {"v3" ["run" "-m" "countdown.core-3"]
+            "v2" ["run" "-m" "countdown.core-2"]
+            "v1" ["run" "-m" "countdown.core"]}
   :profiles {:uberjar {:aot :all}})
