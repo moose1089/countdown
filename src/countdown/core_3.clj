@@ -94,7 +94,7 @@
           :else (/
                  (+ (:score (first sn))
                     (* -1 COUNT_FACTOR (count nums)))
-                 (max 1 (count (filter #(< % 5) (map :v nums)))))
+                 (max 1 (count (filter #(<= % 5) (map :v nums)))))
           )))
 
 (def profile (atom 0))
