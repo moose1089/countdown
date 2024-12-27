@@ -77,8 +77,7 @@
 
 (def MAX_E 200)
 (def ENERGY_EXPANSION_FACTOR 2)
-;(def COUNT_FACTOR 2)
-(def SECONDARY_BRANCH_FACTOR 2)
+(def SECONDARY_BRANCH_FACTOR 0.4)
 
 (defn best-of [a b]
   {:pre {(or (nil? a) (number? a)) (or (nil? b) (number? b))}}
@@ -93,8 +92,7 @@
   (let [sn (sort-by :score nums)]
     (cond (== 0 (:score (first sn))) 0
           :else (/
-                 (+ (:score (first sn))
-                    #_(* -1 COUNT_FACTOR (count nums)))
+                 (+ (:score (first sn)))
                  (max 1 (count (filter #(<= % 5) (map :v nums))))))))
 
 (def profile (atom 0))
