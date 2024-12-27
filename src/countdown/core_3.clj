@@ -7,6 +7,7 @@
   (:gen-class))
 
 ;; lein v3 676  500 100 5 3 2 1
+;; lein v3 930 50 75 10 5 1 7
 
 (defn pprint [s]
   (let [reps {* "*" + "+" - "-" / "/"}
@@ -76,8 +77,8 @@
 
 (def MAX_E 200)
 (def ENERGY_EXPANSION_FACTOR 2)
-(def COUNT_FACTOR 2)
-(def SECONDARY_BRANCH_FACTOR 3)
+;(def COUNT_FACTOR 2)
+(def SECONDARY_BRANCH_FACTOR 2)
 
 (defn best-of [a b]
   {:pre {(or (nil? a) (number? a)) (or (nil? b) (number? b))}}
@@ -93,9 +94,8 @@
     (cond (== 0 (:score (first sn))) 0
           :else (/
                  (+ (:score (first sn))
-                    (* -1 COUNT_FACTOR (count nums)))
-                 (max 1 (count (filter #(<= % 5) (map :v nums)))))
-          )))
+                    #_(* -1 COUNT_FACTOR (count nums)))
+                 (max 1 (count (filter #(<= % 5) (map :v nums))))))))
 
 (def profile (atom 0))
 
@@ -108,7 +108,7 @@
        (println "E=" e " Best=" (pprint best-value) "=" (:v best-value), "score=" (:score best-value))
        (if (or (== 0 (or (:score best-value) 1)) (< MAX_E e))
          best-value
-         (recur (* ENERGY_EXPANSION_FACTOR  e)
+         (recur (* ENERGY_EXPANSION_FACTOR e)
                 (best-of best-value (solve target initial-values e)))))))
   ([target nums energy]
    (swap! profile inc)
@@ -136,7 +136,6 @@
                   #_value-position
                   #_remove-first*
                   )
-
 
 (defn -main
   [target & nums]
