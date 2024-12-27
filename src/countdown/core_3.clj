@@ -70,17 +70,17 @@
 ;;;    (println "combine-values" target "from" a "," b "=>" (pprint r))
     r))
 
-;;(trace/trace-vars #_s-contains #_combine-values remove-first*)
-
-(defn unique-by
+#_(defn unique-by
   [f s]
   (map first (vals (group-by f s))))
 
-(def MAX_E 100)
-(def COUNT_FACTOR 1.0)
-
+(def MAX_E 200)
+(def ENERGY_EXPANSION_FACTOR 2)
+(def COUNT_FACTOR 1)
+(def SECONDARY_BRANCH_FACTOR 1.5)
 
 (defn best-of [a b]
+  {:pre {(or (nil? a) (number? a)) (or (nil? b) (number? b))}}
   (cond (nil? a)                  b
         (nil? b)                  a
         (< (:score b) (:score a)) b
@@ -91,36 +91,54 @@
   [nums]
   (let [sn (sort-by :score nums)]
     (cond (== 0 (:score (first sn))) 0
-          :else (+ (:score (first sn)) ( * COUNT_FACTOR  (count nums)))
-      )))
+          :else (/
+                 (+ (:score (first sn))
+                    (* -1 COUNT_FACTOR (count nums)))
+                 (max 1 (count (filter #(< % 5) (map :v nums)))))
+          )))
+
+(def profile (atom 0))
 
 (defn solve
   ;; return best found
   ([target nums]
-   (loop [e          2
-          best-value nil]
-     (printf "E=%s Best=%s\n" e best-value)
-     (if (or (== 0 (:score best-value)) (< MAX_E e))
-       best-value
-       (recur (* 1.5 e)
-              (best-of best-value (solve target nums e))))))
+   (let [initial-values (map (partial make-initial-vals target nums) nums)]
+     (loop [e          1
+            best-value nil]
+       (println "E=" e " Best=" (pprint best-value) "=" (:v best-value), "score=" (:score best-value))
+       (if (or (== 0 (or (:score best-value) 1)) (< MAX_E e))
+         best-value
+         (recur (* ENERGY_EXPANSION_FACTOR  e)
+                (best-of best-value (solve target initial-values e)))))))
   ([target nums energy]
-   (println "TRACE solve " [target nums energy])
-   (if (neg? energy)
+   (swap! profile inc)
+   ;(println "TRACE solve" (pprint [target nums energy]))
+   (if (or (< (count nums) 2) (neg? energy))
      (first (sort-by :score nums))
-     (let [combinations    (combo/combinations num 2)
+     (let [combinations    (combo/combinations nums 2)
            candidate-steps (sort-by (comp :value)
                                     (for [c         combinations
                                           new-value (apply combine-values target c)]
                                       (let [new-nums (conj (remove-all nums c) new-value)
                                             value    (value-position new-nums)]
-                                        {:value value
-                                         :nums  nums}
-                                        )))]
-       (map (fn [i c]
-              (solve target (:nums c) (- energy i 1)))
-            (map-indexed identity candidate-steps))
+                                       {:value value
+                                        :nums  new-nums}
+                                       )))
+           r               (first (sort-by :score (map (fn [[i c]]
+                                                         (let [e (- energy (* i SECONDARY_BRANCH_FACTOR) 1)]
+                                                           (solve target (:nums c) e)))
+                                         (map-indexed vector candidate-steps))))]
+       ;(println "Candidate steps" candidate-steps)
+       ;(println "returning " (pprint r))
+       r
        ))))
+
+
+(trace/trace-vars #_s-contains #_combine-values
+                  #_value-position
+                  #_remove-first*
+                  )
+
 
 (defn -main
   [target & nums]
@@ -128,7 +146,8 @@
         nums   (map #(Integer/parseInt %) nums)]
     (println "Aiming for" target "with" nums)
     (let [r (solve target nums)]
-      (when (= 0 (:best-score r))
+      (when (== 0 (:score r))
         (println "FOUND!"))
-      (println "BEST" (pprint r))))
+      (println "BEST" (pprint r) "=" (:v r), "score=" (:score r))
+      (println "num calls" @profile)))
   (shutdown-agents))
