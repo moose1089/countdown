@@ -76,8 +76,8 @@
 
 (def MAX_E 200)
 (def ENERGY_EXPANSION_FACTOR 2)
-(def COUNT_FACTOR 1)
-(def SECONDARY_BRANCH_FACTOR 1.5)
+(def COUNT_FACTOR 2)
+(def SECONDARY_BRANCH_FACTOR 3)
 
 (defn best-of [a b]
   {:pre {(or (nil? a) (number? a)) (or (nil? b) (number? b))}}
@@ -128,8 +128,6 @@
                                                          (let [e (- energy (* i SECONDARY_BRANCH_FACTOR) 1)]
                                                            (solve target (:nums c) e)))
                                          (map-indexed vector candidate-steps))))]
-       ;(println "Candidate steps" candidate-steps)
-       ;(println "returning " (pprint r))
        r
        ))))
 
