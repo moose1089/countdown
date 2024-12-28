@@ -77,7 +77,7 @@
 
 (def MAX_E 200)
 (def ENERGY_EXPANSION_FACTOR 2)
-(def SECONDARY_BRANCH_FACTOR 0.4)
+(def SECONDARY_BRANCH_FACTOR 0.2)
 
 (defn best-of [a b]
   {:pre {(or (nil? a) (number? a)) (or (nil? b) (number? b))}}
@@ -86,14 +86,19 @@
         (< (:score b) (:score a)) b
         :else                     a))
 
+(defn sum-squares [s]
+  (reduce + (map * s s)))
+
 (defn value-position
   "Lower is better"
   [nums]
   (let [sn (sort-by :score nums)]
     (cond (== 0 (:score (first sn))) 0
           :else (/
-                 (+ (:score (first sn)))
-                 (max 1 (count (filter #(<= % 5) (map :v nums))))))))
+                 (* 10 (:score (first sn)))
+                 (sum-squares (map :score nums))
+                 #_(max 1 (count (filter #(<= % 5) (map :v nums))))
+                 ))))
 
 (def profile (atom 0))
 
