@@ -63,13 +63,14 @@
                     (apply shaped-fn args)
                     (catch ArithmeticException e ;; div by 0
                       nil))]
-        (merge
-         (when (= target value)
-           {:message "!!!!! WINNER !!!"})
-         {:tree   (populate-tree* args shape)
-          :target target
-          :score  (when value (abs (- target value)))
-          :value  value})))))
+        (when (int? value) ;; some divisions left a remainder.
+          (merge
+           (when (= target value)
+             {:message "!!!!! WINNER !!!"})
+           {:tree   (populate-tree* args shape)
+            :target target
+            :score  (when value (abs (- target value)))
+            :value  value}))))))
 
 (defn solve
   [target nums]
